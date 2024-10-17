@@ -3,12 +3,12 @@
 namespace PrivateDump;
 
 use Faker\Generator;
-use PhpParser\Node\Param;
 
 class Transformer
 {
     public static $booted = false;
     private $objectCache = [];
+    private $varCache = [];
     private $currentSeed = 0;
     private $faker;
     private $transformerAliases = [
@@ -59,6 +59,16 @@ class Transformer
     public function forget()
     {
         $this->objectCache = [];
+        $this->varCache = [];
+    }
+
+    /**
+     * Define variables valid for substitution
+     */
+    public function set($name, $value)
+    {
+        $val = $this->transform(null, $value);
+        $this->varCache['$' . $name] = $val;
     }
 
     /**
@@ -168,15 +178,22 @@ class Transformer
     public function transform($value, $replacement)
     {
         $modifiers = [];
-        // Doesn't start with @, just return the value in the config
-        if (strpos($replacement, '@') !== 0) {
+        // Doesn't start with @ or $, just return the value in the config
+        if (empty($replacement) || ($replacement[0] != '@' && $replacement[0] != '$')) {
             return $replacement;
         }
 
+        // Check if replacement begins with a `$`, in which case it's a preset variable
+        if ($replacement[0] == '$') {
+            if (array_key_exists($replacement, $this->varCache)) {
+                return $this->varCache[$replacement];
+            } else {
+                return $replacement;
+            }
+        }
 
         // Check if replacement matches the "@replacementObject(name).accessor" format,
         // in which case a named object will be placed in the object cache.
-
         $object = null;
         $matches = null;
         if (preg_match('/^@(\w+)\((\w+\))\.(.*)$/', $replacement, $matches)) {

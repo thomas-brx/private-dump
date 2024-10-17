@@ -81,6 +81,12 @@ foreach ($databases as $databaseName => $tables) {
             }
         }
 
+        if (isset($tableConfig['@preset'])) {
+            foreach ($tableConfig['@preset'] as $var) {
+                $transformer->set($var['name'], $var['value']);
+            }
+        }
+
         foreach ($row as $colName => $colValue) {
             if (!array_key_exists($colName, $tables[$tableName])) {
                 continue;
